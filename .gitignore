@@ -1,3 +1,6 @@
+# local tooling (portable node/docker on Mac)
+.tools/
+
 # dependencies
 /node_modules
 /.pnp

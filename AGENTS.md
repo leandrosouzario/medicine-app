@@ -32,14 +32,19 @@ public/               manifest, ícones PWA
 - Tema claro padrão; toggle no header
 - Nome exibido: **Remédios**
 
-## Deploy
+## Deploy (Docker Compose)
 
 ```bash
-npm run dev          # :3050
-docker compose up -d # :3050 no host
+cp .env.example .env
+docker compose build
+docker compose up -d
+docker compose logs -f medicine-app
 ```
 
-Cloudflare Tunnel: `med.leandrosouza.info` → host `:3050`
+- Host `:3050` → container `:3000`
+- Cloudflare Tunnel: `med.leandrosouza.info` → host `:3050`
+
+Dev local (sem Docker): `npm run dev` na porta 3050.
 
 ## Git
 

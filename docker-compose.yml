@@ -4,6 +4,9 @@ services:
       context: .
       args:
         NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://med.leandrosouza.info}
+    container_name: medicine-app
+    restart: unless-stopped
+    env_file:
+      - .env
     ports:
       - '3050:3000'
-    restart: unless-stopped
