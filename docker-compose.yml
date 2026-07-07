@@ -4,6 +4,10 @@ services:
       context: .
       args:
         NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://med.leandrosouza.info}
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        NEXT_PUBLIC_AUTH_LOGIN_URL: ${NEXT_PUBLIC_AUTH_LOGIN_URL:-https://auth.leandrosouza.info/login}
+        NEXT_PUBLIC_AUTH_PROFILE_URL: ${NEXT_PUBLIC_AUTH_PROFILE_URL:-https://auth.leandrosouza.info/perfil}
     container_name: medicine-app
     restart: unless-stopped
     env_file:

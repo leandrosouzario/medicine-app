@@ -4,13 +4,13 @@ import { MEDICAL_DISCLAIMER } from '@/lib/navigation'
 
 type AppShellProps = {
   children: React.ReactNode
-  subtitle?: string
+  userEmail?: string | null
 }
 
-export function AppShell({ children, subtitle }: AppShellProps) {
+export function AppShell({ children, userEmail }: AppShellProps) {
   return (
     <div className="min-h-dvh bg-slate-50 dark:bg-slate-950">
-      <AppHeader subtitle={subtitle} />
+      <AppHeader userEmail={userEmail} />
       <main className="mx-auto max-w-lg px-4 pb-28 pt-4 md:px-6">{children}</main>
       <footer className="mx-auto max-w-lg px-4 pb-24 text-center text-[11px] leading-relaxed text-slate-400 dark:text-slate-500">
         {MEDICAL_DISCLAIMER}
