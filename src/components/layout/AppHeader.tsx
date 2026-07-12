@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { ThemeToggle } from '@/components/layout/ThemeToggle'
-import { APP_NAME, pageTitles } from '@/lib/navigation'
+import { resolvePageTitle } from '@/lib/navigation'
 import { LogOut, Pill, User } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -17,7 +17,7 @@ type AppHeaderProps = {
 export function AppHeader({ userEmail }: AppHeaderProps) {
   const pathname = usePathname()
   const router = useRouter()
-  const title = pageTitles[pathname] ?? APP_NAME
+  const title = resolvePageTitle(pathname)
   const [signingOut, setSigningOut] = useState(false)
 
   async function handleSignOut() {

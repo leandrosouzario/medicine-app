@@ -1,22 +1,18 @@
-import { EmptyState } from '@/components/ui/EmptyState'
-import { CalendarDays, Plus } from 'lucide-react'
-import Link from 'next/link'
+import { HojeClient } from '@/features/medications/components/HojeClient'
+import {
+  NotificationScheduler,
+  NotificationStatusBadge,
+} from '@/features/medications/components/NotificationScheduler'
+import { getTodayDoses } from '@/features/medications/queries'
 
-export default function HojePage() {
+export default async function HojePage() {
+  const doses = await getTodayDoses()
+
   return (
-    <EmptyState
-      icon={CalendarDays}
-      title="Nada agendado para hoje"
-      description="Cadastre um medicamento com horários para ver o que tomar ao longo do dia."
-      action={
-        <Link
-          href="/medicamentos"
-          className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-brand-700 dark:bg-brand-500 dark:hover:bg-brand-400"
-        >
-          <Plus className="h-4 w-4" />
-          Adicionar medicamento
-        </Link>
-      }
-    />
+    <>
+      <NotificationScheduler doses={doses} />
+      <NotificationStatusBadge />
+      <HojeClient doses={doses} />
+    </>
   )
 }

@@ -5,7 +5,7 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'Remédios — Controle de medicamentos',
   description:
-    'Registre medicamentos, horários e acompanhe o que tomar hoje. Dados salvos no seu dispositivo.',
+    'Registre medicamentos, horários e acompanhe o que tomar hoje. Dados sincronizados na sua conta.',
   applicationName: 'Remédios',
   appleWebApp: {
     capable: true,

@@ -2,13 +2,21 @@
 
 App de controle de medicamentos em `https://med.leandrosouza.info`.
 
+## Ecossistema
+
+- Listado no **hub-app** (`https://hub.leandrosouza.info`) como **Controle de Medicamentos**, com link ativo para esta app
+- SSO compartilhado com `auth-app`, `gym-app`, `balcao-app` e demais apps do domínio `.leandrosouza.info`
+- Mapa completo de subdomínios, portas e decisões em `../ECOSYSTEM.md`
+
 ## Escopo
 
 - Autenticação via Supabase SSO (delegada ao `auth-app`) em `src/middleware.ts` e `src/lib/supabase/`
 - UI e fluxos em `src/app/(app)/`
 - Componentes em `src/components/`
-- Persistência local em `src/lib/db/` (IndexedDB via idb-keyval — temporário até migração para Supabase)
-- PWA em `public/manifest.webmanifest`
+- Persistência em Supabase (`med_medications`, `med_dose_events`) via `src/features/medications/`
+- Importação única do IndexedDB local (legado S1) em `LocalDataMigrator`
+- Fuso horário local via cookie `tz_offset_min` (`TzSetter`) — geração de doses no servidor respeita o offset do browser
+- PWA em `public/manifest.webmanifest` + service worker (`public/sw.js`) com notificações locais de dose
 
 **Fora de escopo:** API routes próprias, integração com balcao-app.
 
@@ -21,11 +29,14 @@ Next.js 16 · React 18 · TypeScript · Tailwind 3 · next-themes · @supabase/s
 ```
 src/app/              layout, páginas, globals.css
 src/middleware.ts     gate de autenticação (tudo protegido exceto assets)
-src/components/       layout (AppShell, AppHeader, ThemeToggle), ui
-src/features/         domínio por feature (medications, doses)
-src/lib/db/           IndexedDB + tipos (temporário)
+src/components/       layout (AppShell, AppHeader), TzSetter, ServiceWorkerRegistration, ui
+src/features/medications/  CRUD, doses, sync Supabase, TimePicker, NotificationScheduler
+src/lib/dates.ts      datas locais + funções offset-aware
+src/lib/tz.ts         leitura do cookie tz_offset_min (server)
+src/lib/db/           IndexedDB legado (importação única)
 src/lib/supabase/     client.ts, server.ts, middleware.ts, cookie-options.ts
-public/               manifest, ícones PWA
+public/               manifest, sw.js, ícones PWA
+supabase/migrations/  tabelas med_*
 ```
 
 ## Variáveis de ambiente
@@ -83,8 +94,8 @@ docker compose up -d --build
 | Sprint | Entrega |
 |--------|---------|
 | S0 | Setup, tema, navegação, PWA básico |
-| S1 | CRUD medicamentos + IndexedDB + geração de doses |
-| S2 | Tela Hoje, marcar tomado/pulado |
-| S2.5 | Autenticação Supabase SSO (atual) |
-| S3 | Migração IndexedDB → Supabase (med_medications, med_dose_events + RLS) |
-| S4 | PWA completo (ícones PNG, service worker) |
+| S1 | CRUD medicamentos + IndexedDB + geração de doses | Concluída |
+| S2 | Tela Hoje, marcar tomado/pulado | Concluída |
+| S2.5 | Autenticação Supabase SSO | Concluída |
+| S3 | Migração IndexedDB → Supabase (med_medications, med_dose_events + RLS) | Concluída |
+| S4 | PWA completo (ícones PNG, service worker) | Parcial — SW + notificações locais prontos; ícones PNG pendentes |

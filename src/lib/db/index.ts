@@ -1,3 +1,4 @@
+/** IndexedDB legado — usado apenas para importação única via LocalDataMigrator. */
 import { get, set } from 'idb-keyval'
 import type { DoseEvent, Medication } from '@/lib/db/types'
 import { DB_KEYS } from '@/lib/db/types'

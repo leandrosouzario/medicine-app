@@ -23,6 +23,19 @@ export const mainNavigation: NavItem[] = [
 export const pageTitles: Record<string, string> = {
   '/hoje': 'Hoje',
   '/medicamentos': 'Medicamentos',
+  '/medicamentos/novo': 'Novo medicamento',
+}
+
+export function resolvePageTitle(pathname: string): string {
+  if (pageTitles[pathname]) {
+    return pageTitles[pathname]
+  }
+
+  if (/^\/medicamentos\/[^/]+$/.test(pathname)) {
+    return 'Editar medicamento'
+  }
+
+  return APP_NAME
 }
 
 export const APP_NAME = 'Remédios'
