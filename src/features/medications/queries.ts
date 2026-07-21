@@ -6,6 +6,7 @@ import {
 } from '@/features/medications/mappers'
 import { getTodayDoseEvents } from '@/features/medications/dose-schedule'
 import { syncDoseEventsWithSupabase } from '@/features/medications/sync-doses'
+import { markMissedPendingDoses } from '@/features/medications/mark-missed-doses'
 import { getTzOffsetMinutes } from '@/lib/tz'
 
 async function getAuthenticatedClient() {
@@ -110,6 +111,8 @@ export async function ensureDoseSchedule(): Promise<void> {
     doseEventRows,
     { tzOffsetMinutes },
   )
+
+  await markMissedPendingDoses(auth.supabase, auth.user.id)
 }
 
 export async function getDoseEvents(): Promise<DoseEvent[]> {

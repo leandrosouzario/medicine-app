@@ -7,6 +7,7 @@ import type { DoseEvent, Medication } from '@/lib/db/types'
 import {
   buildMedicationFromInput,
   type MedicationInput,
+  validateMedicationInput,
 } from '@/features/medications/input'
 import {
   doseEventToInsert,
@@ -62,8 +63,9 @@ export async function createMedication(input: MedicationInput): Promise<ActionRe
     return { error: 'Não autenticado' }
   }
 
-  if (!input.name.trim()) {
-    return { error: 'Informe o nome do medicamento.' }
+  const validationError = validateMedicationInput(input)
+  if (validationError) {
+    return { error: validationError }
   }
 
   const medication = buildMedicationFromInput(input)
@@ -90,8 +92,9 @@ export async function updateMedication(
     return { error: 'Não autenticado' }
   }
 
-  if (!input.name.trim()) {
-    return { error: 'Informe o nome do medicamento.' }
+  const validationError = validateMedicationInput(input)
+  if (validationError) {
+    return { error: validationError }
   }
 
   const { data: existing, error: fetchError } = await auth.supabase

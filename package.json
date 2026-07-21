@@ -7,7 +7,8 @@
     "dev": "next dev -p 3050",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "icons": "node scripts/generate-icons.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
@@ -20,6 +21,7 @@
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "@types/node": "^22.15.21",
     "@types/react": "^18.3.20",
     "@types/react-dom": "^18.3.6",

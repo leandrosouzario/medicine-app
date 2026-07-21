@@ -92,8 +92,8 @@ self.addEventListener('message', (event) => {
     const timerId = setTimeout(() => {
       self.registration.showNotification(dose.title, {
         body: dose.body,
-        icon: '/icons/icon.svg',
-        badge: '/icons/icon.svg',
+        icon: '/icons/icon-192.png',
+        badge: '/icons/icon-192.png',
         tag: `dose-${dose.id}`,
         renotify: false,
         data: { url: '/hoje' },
@@ -130,8 +130,8 @@ self.addEventListener('notificationclick', (event) => {
     setTimeout(() => {
       self.registration.showNotification(dose.title, {
         body: dose.body,
-        icon: '/icons/icon.svg',
-        badge: '/icons/icon.svg',
+        icon: '/icons/icon-192.png',
+        badge: '/icons/icon-192.png',
         tag: dose.id,
         data: { url: targetUrl },
       })

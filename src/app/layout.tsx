@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { ThemeProvider } from '@/components/layout/ThemeProvider'
+import { PWA_APPLE_TOUCH_ICON } from '@/lib/pwa-icons'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -15,12 +16,15 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
-  manifest: '/manifest.webmanifest',
+  icons: {
+    icon: [{ url: '/icons/icon.svg', type: 'image/svg+xml' }],
+    apple: [{ url: PWA_APPLE_TOUCH_ICON, sizes: '180x180', type: 'image/png' }],
+  },
 }
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#0891b2' },
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
     { media: '(prefers-color-scheme: dark)', color: '#083344' },
   ],
   width: 'device-width',
@@ -36,6 +40,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
+      <head>
+        <link rel="apple-touch-icon" href={PWA_APPLE_TOUCH_ICON} sizes="180x180" />
+      </head>
       <body className="antialiased">
         <ThemeProvider>{children}</ThemeProvider>
       </body>

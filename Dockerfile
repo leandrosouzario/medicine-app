@@ -23,6 +23,8 @@ RUN npm install
 
 COPY . .
 
+RUN npm run icons
+
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000

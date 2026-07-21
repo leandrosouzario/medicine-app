@@ -6,11 +6,11 @@ import {
   endOfDayWithOffset,
   formatDisplayDate,
   parseLocalDate,
-  parseTimeOnDate,
   parseTimeOnDateWithOffset,
   startOfDay,
   startOfDayWithOffset,
 } from '@/lib/dates'
+import { DAY_LABELS_SHORT } from '@/features/medications/labels'
 
 const DEFAULT_HORIZON_DAYS = 30
 
@@ -20,9 +20,14 @@ export type DoseScheduleOptions = {
   tzOffsetMinutes?: number
 }
 
-function isDayAllowed(date: Date, daysOfWeek?: number[]): boolean {
+function getLocalDayOfWeek(date: Date, tzOffsetMinutes: number): number {
+  const localEpoch = date.getTime() - tzOffsetMinutes * 60_000
+  return new Date(localEpoch).getUTCDay()
+}
+
+function isDayAllowed(date: Date, daysOfWeek: number[] | undefined, tzOffsetMinutes: number): boolean {
   if (!daysOfWeek || daysOfWeek.length === 0) return true
-  return daysOfWeek.includes(date.getDay())
+  return daysOfWeek.includes(getLocalDayOfWeek(date, tzOffsetMinutes))
 }
 
 function isWithinPeriod(date: Date, medication: Medication): boolean {
@@ -47,7 +52,7 @@ function generateFixedTimeEvents(
   let cursor = startOfDayWithOffset(from, tzOffsetMinutes)
 
   while (cursor <= to) {
-    if (isWithinPeriod(cursor, medication) && isDayAllowed(cursor, medication.schedule.daysOfWeek)) {
+    if (isWithinPeriod(cursor, medication) && isDayAllowed(cursor, medication.schedule.daysOfWeek, tzOffsetMinutes)) {
       for (const time of times) {
         const scheduledAt = parseTimeOnDateWithOffset(cursor, time, tzOffsetMinutes)
         if (scheduledAt >= from && scheduledAt <= to) {
@@ -70,15 +75,25 @@ function generateIntervalEvents(
   medication: Medication,
   from: Date,
   to: Date,
+  tzOffsetMinutes: number,
 ): DoseEvent[] {
   const intervalHours = medication.schedule.intervalHours
   if (!intervalHours || intervalHours <= 0) return []
 
+  const startTime = medication.schedule.times?.[0] ?? '08:00'
+  let cursor = parseTimeOnDateWithOffset(from, startTime, tzOffsetMinutes)
+
+  // Se o horário inicial de hoje já passou, avança para o próximo slot futuro dentro do dia
+  if (cursor < from) {
+    while (cursor < from) {
+      cursor = new Date(cursor.getTime() + intervalHours * 3_600_000)
+    }
+  }
+
   const events: DoseEvent[] = []
-  let cursor = new Date(from)
 
   while (cursor <= to) {
-    if (isWithinPeriod(cursor, medication) && isDayAllowed(cursor, medication.schedule.daysOfWeek)) {
+    if (isWithinPeriod(cursor, medication) && isDayAllowed(cursor, medication.schedule.daysOfWeek, tzOffsetMinutes)) {
       events.push({
         id: crypto.randomUUID(),
         medicationId: medication.id,
@@ -137,7 +152,7 @@ export function regenerateDoseEvents(
 
   const generated =
     medication.schedule.type === 'interval'
-      ? generateIntervalEvents(medication, generationStart, generationEnd)
+      ? generateIntervalEvents(medication, generationStart, generationEnd, tzOffset)
       : generateFixedTimeEvents(medication, generationStart, generationEnd, tzOffset)
 
   const keptKeys = new Set(keptEvents.map(eventKey))
@@ -195,14 +210,26 @@ export function getTodayDoseEvents(
   )
 }
 
+function formatDaysSuffix(daysOfWeek?: number[]): string {
+  if (!daysOfWeek?.length || daysOfWeek.length === 7) return ''
+  const labels = [...daysOfWeek].sort((a, b) => a - b).map((d) => DAY_LABELS_SHORT[d])
+  return ` (${labels.join(', ')})`
+}
+
 export function describeSchedule(medication: Medication): string {
   const { schedule } = medication
-  if (schedule.type === 'as_needed') return 'Quando necessário'
-  if (schedule.type === 'interval') return `A cada ${schedule.intervalHours ?? '?'} h`
+  const days = formatDaysSuffix(schedule.daysOfWeek)
+
+  if (schedule.type === 'as_needed') return `Quando necessário${days}`
+  if (schedule.type === 'interval') {
+    const start = schedule.times?.[0]
+    const base = `A cada ${schedule.intervalHours ?? '?'} h`
+    return start ? `${base} · início ${start}${days}` : `${base}${days}`
+  }
 
   const times = schedule.times ?? []
   if (times.length === 0) return 'Sem horários'
-  return times.join(', ')
+  return `${times.join(', ')}${days}`
 }
 
 export function describePeriod(medication: Medication): string {

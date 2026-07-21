@@ -1,4 +1,4 @@
-import type { MedicationForm } from '@/lib/db/types'
+import type { MedicationForm, ScheduleType } from '@/lib/db/types'
 
 export const FORM_LABELS: Record<MedicationForm, string> = {
   pill: 'Comprimido / cápsula',
@@ -6,6 +6,14 @@ export const FORM_LABELS: Record<MedicationForm, string> = {
   injection: 'Injeção',
   other: 'Outro',
 }
+
+export const SCHEDULE_TYPE_LABELS: Record<ScheduleType, string> = {
+  fixed_times: 'Horários fixos',
+  interval: 'A cada X horas',
+  as_needed: 'Quando necessário',
+}
+
+export const DAY_LABELS_SHORT = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'] as const
 
 export const inputClassName =
   'w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500'
