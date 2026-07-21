@@ -2,9 +2,9 @@
 // Responsabilidades:
 //   1. Cache de assets para suporte offline básico
 //   2. Exibir notificações agendadas pelo cliente via postMessage
-//   3. Abrir /hoje ao tocar na notificação
+//   3. Marcar dose como tomada (via client) ou abrir /hoje
 
-const CACHE_NAME = 'remedios-v1'
+const CACHE_NAME = 'remedios-v2'
 
 const PRECACHE_URLS = [
   '/hoje',
@@ -12,9 +12,6 @@ const PRECACHE_URLS = [
   '/manifest.webmanifest',
 ]
 
-// ──────────────────────────────────────────────
-// Instalação: pré-cache dos assets estáticos
-// ──────────────────────────────────────────────
 self.addEventListener('install', (event) => {
   self.skipWaiting()
 
@@ -23,9 +20,6 @@ self.addEventListener('install', (event) => {
   )
 })
 
-// ──────────────────────────────────────────────
-// Ativação: limpa caches antigos
-// ──────────────────────────────────────────────
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
@@ -37,11 +31,7 @@ self.addEventListener('activate', (event) => {
   )
 })
 
-// ──────────────────────────────────────────────
-// Fetch: network-first, fallback para cache
-// ──────────────────────────────────────────────
 self.addEventListener('fetch', (event) => {
-  // Ignora requisições não-GET e cross-origin
   if (event.request.method !== 'GET') return
   const url = new URL(event.request.url)
   if (url.origin !== self.location.origin) return
@@ -49,7 +39,6 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // Atualiza cache com resposta fresca
         if (response.ok) {
           const clone = response.clone()
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone))
@@ -60,14 +49,6 @@ self.addEventListener('fetch', (event) => {
   )
 })
 
-// ──────────────────────────────────────────────
-// Notificações agendadas pelo cliente
-//
-// O cliente envia:
-// { type: 'SCHEDULE_NOTIFICATIONS', doses: [{ id, title, body, scheduledAt }] }
-// ──────────────────────────────────────────────
-
-/** Map<doseId, timeoutId> para poder cancelar re-agendamentos */
 const scheduledTimers = new Map()
 
 self.addEventListener('message', (event) => {
@@ -75,7 +56,6 @@ self.addEventListener('message', (event) => {
 
   const doses = event.data.doses ?? []
 
-  // Cancela agendamentos anteriores
   for (const timerId of scheduledTimers.values()) {
     clearTimeout(timerId)
   }
@@ -86,7 +66,6 @@ self.addEventListener('message', (event) => {
   for (const dose of doses) {
     const delay = new Date(dose.scheduledAt).getTime() - now
 
-    // Ignora horários já passados ou mais de 24h no futuro
     if (delay <= 0 || delay > 24 * 60 * 60 * 1000) continue
 
     const timerId = setTimeout(() => {
@@ -96,7 +75,7 @@ self.addEventListener('message', (event) => {
         badge: '/icons/icon-192.png',
         tag: `dose-${dose.id}`,
         renotify: false,
-        data: { url: '/hoje' },
+        data: { url: '/hoje', doseId: dose.id },
         actions: [
           { action: 'taken', title: 'Tomado ✓' },
           { action: 'snooze', title: 'Lembrar em 10 min' },
@@ -110,47 +89,58 @@ self.addEventListener('message', (event) => {
   }
 })
 
-// ──────────────────────────────────────────────
-// Click na notificação
-// ──────────────────────────────────────────────
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
 
+  const doseId = event.notification.data?.doseId
   const targetUrl = event.notification.data?.url ?? '/hoje'
 
   if (event.action === 'snooze') {
-    // Reagenda para daqui a 10 minutos
-    const dose = {
-      id: `snooze-${event.notification.tag}`,
-      title: event.notification.title,
-      body: event.notification.body,
-      scheduledAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
-    }
-
     setTimeout(() => {
-      self.registration.showNotification(dose.title, {
-        body: dose.body,
+      self.registration.showNotification(event.notification.title, {
+        body: event.notification.body,
         icon: '/icons/icon-192.png',
         badge: '/icons/icon-192.png',
-        tag: dose.id,
-        data: { url: targetUrl },
+        tag: event.notification.tag ?? `snooze-${Date.now()}`,
+        data: { url: targetUrl, doseId },
+        actions: [
+          { action: 'taken', title: 'Tomado ✓' },
+          { action: 'snooze', title: 'Lembrar em 10 min' },
+        ],
       })
     }, 10 * 60 * 1000)
 
     return
   }
 
-  // action === 'taken' ou clique direto → abre /hoje
-  event.waitUntil(
-    self.clients
-      .matchAll({ type: 'window', includeUncontrolled: true })
-      .then((clients) => {
-        // Foca aba existente se houver
-        const existing = clients.find((c) => c.url.includes('/hoje') || c.url.includes(self.location.origin))
-        if (existing) {
-          return existing.focus()
+  if (event.action === 'taken' && doseId) {
+    event.waitUntil(
+      self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+        for (const client of clients) {
+          client.postMessage({ type: 'MARK_DOSE_TAKEN', doseId })
         }
-        return self.clients.openWindow(targetUrl)
+
+        if (clients.length > 0) {
+          const existing = clients.find((c) => c.url.includes(self.location.origin))
+          return existing?.focus()
+        }
+
+        return self.clients.openWindow(`/hoje?taken=${encodeURIComponent(doseId)}`)
       }),
+    )
+    return
+  }
+
+  // Clique no corpo da notificação → abre Hoje
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      const existing = clients.find(
+        (c) => c.url.includes('/hoje') || c.url.includes(self.location.origin),
+      )
+      if (existing) {
+        return existing.focus()
+      }
+      return self.clients.openWindow(targetUrl)
+    }),
   )
 })

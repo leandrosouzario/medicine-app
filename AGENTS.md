@@ -20,6 +20,7 @@ App de controle de medicamentos em `https://med.leandrosouza.info`.
 - Importação única do IndexedDB local (legado S1) em `LocalDataMigrator`
 - Fuso horário local via cookie `tz_offset_min` (`TzSetter`) — geração de doses no servidor respeita o offset do browser
 - PWA via `src/app/manifest.ts` + service worker (`public/sw.js`) com notificações locais de dose
+- Ação **Tomado** na notificação grava dose via `NotificationActionHandler` + server action
 
 **Fora de escopo:** API routes próprias, integração com balcao-app.
 
@@ -106,4 +107,12 @@ docker compose up -d --build
 | S5 | Consolidação (docs, branch main) | Concluída |
 | S6 | Agenda avançada (intervalo, dias, perdido auto, DatePicker) | Concluída |
 | S7 | Histórico e aderência (7/30 dias, % tomadas) | Concluída |
-| S8 | Notificações robustas (ação “Tomado” na notif.) | Planejada |
+| S8 | Notificações: ação “Tomado” grava no BD | Concluída |
+
+## Notificações (limitações)
+
+- Agendamento via `setTimeout` no service worker — funciona com app em segundo plano ou aberto
+- **iOS:** lembretes não são confiáveis com app fechado por longos períodos; instale na Tela de Início
+- Botão **Tomado** na notificação: `postMessage` → `NotificationActionHandler` → `updateDoseEventStatus`; se o app estiver fechado, abre `/hoje?taken=<id>`
+- **Snooze** (10 min) é local ao dispositivo, não persiste no Supabase
+- Push server-side (fora do escopo): exigiria backend/worker no mini-server

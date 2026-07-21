@@ -128,7 +128,9 @@ export function NotificationScheduler({ doses }: NotificationSchedulerProps) {
           Ativar lembretes de dose?
         </p>
         <p className="mt-0.5 text-xs text-brand-700 dark:text-brand-300">
-          Você receberá um aviso na hora de cada medicamento. Funciona com o app aberto ou em segundo plano.
+          Aviso na hora de cada medicamento. O botão &quot;Tomado&quot; na notificação grava no
+          seu histórico. No iPhone, lembretes exigem o app instalado e podem falhar com o app
+          fechado por muito tempo.
         </p>
 
         <div className="mt-3 flex gap-2">

@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { AppShell } from '@/components/layout/AppShell'
 import { LocalDataMigrator } from '@/features/medications/components/LocalDataMigrator'
 import { ServiceWorkerRegistration } from '@/components/ServiceWorkerRegistration'
+import { NotificationActionHandler } from '@/features/medications/components/NotificationActionHandler'
 import { TzSetter } from '@/components/TzSetter'
 
 export default async function AppLayout({
@@ -18,6 +19,7 @@ export default async function AppLayout({
     <AppShell userEmail={user?.email}>
       <TzSetter />
       <ServiceWorkerRegistration />
+      <NotificationActionHandler />
       <LocalDataMigrator />
       {children}
     </AppShell>
