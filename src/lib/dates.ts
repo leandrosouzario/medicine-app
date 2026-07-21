@@ -117,3 +117,13 @@ export function formatShortDate(date: Date): string {
 export function todayLocalDate(): string {
   return formatLocalDate(new Date())
 }
+
+/** Chave yyyy-mm-dd no fuso local do usuário (via offset do browser). */
+export function localDateKeyFromInstant(date: Date, tzOffsetMinutes: number): string {
+  const localEpoch = date.getTime() - tzOffsetMinutes * 60_000
+  const d = new Date(localEpoch)
+  const year = d.getUTCFullYear()
+  const month = String(d.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(d.getUTCDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}

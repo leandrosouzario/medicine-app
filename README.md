@@ -13,6 +13,7 @@ Aplicação web (PWA) para registrar medicamentos, horários e acompanhar o que 
 - CRUD de medicamentos com horários fixos, intervalo ou “quando necessário”
 - Seleção de dias da semana
 - Tela **Hoje** — marcar tomado, pular ou perdido (automático)
+- Tela **Histórico** — aderência dos últimos 7/30 dias por medicamento e por dia
 - Dados sincronizados no Supabase (`med_medications`, `med_dose_events`)
 - PWA instalável com ícones PNG e notificações locais de dose
 - Importação única de dados legados do IndexedDB (dispositivos antigos)

@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { CalendarDays, Pill } from 'lucide-react'
+import { BarChart3, CalendarDays, Pill } from 'lucide-react'
 
 export type NavItem = {
   label: string
@@ -18,12 +18,18 @@ export const mainNavigation: NavItem[] = [
     href: '/medicamentos',
     icon: Pill,
   },
+  {
+    label: 'Histórico',
+    href: '/historico',
+    icon: BarChart3,
+  },
 ]
 
 export const pageTitles: Record<string, string> = {
   '/hoje': 'Hoje',
   '/medicamentos': 'Medicamentos',
   '/medicamentos/novo': 'Novo medicamento',
+  '/historico': 'Histórico',
 }
 
 export function resolvePageTitle(pathname: string): string {

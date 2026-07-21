@@ -5,6 +5,10 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { CalendarDays, Check, Plus, SkipForward } from 'lucide-react'
 import { EmptyState } from '@/components/ui/EmptyState'
+import {
+  DOSE_STATUS_LABELS,
+  DOSE_STATUS_STYLES,
+} from '@/features/medications/dose-status'
 import { updateDoseEventStatus } from '@/features/medications/actions'
 import type { DoseEvent, Medication } from '@/lib/db/types'
 import { formatTime } from '@/lib/dates'
@@ -13,20 +17,6 @@ type TodayDose = DoseEvent & { medication: Medication }
 
 type HojeClientProps = {
   doses: TodayDose[]
-}
-
-const STATUS_LABELS: Record<DoseEvent['status'], string> = {
-  pending: 'Pendente',
-  taken: 'Tomado',
-  skipped: 'Pulado',
-  missed: 'Perdido',
-}
-
-const STATUS_STYLES: Record<DoseEvent['status'], string> = {
-  pending: 'bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200',
-  taken: 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200',
-  skipped: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
-  missed: 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300',
 }
 
 export function HojeClient({ doses }: HojeClientProps) {
@@ -128,9 +118,9 @@ export function HojeClient({ doses }: HojeClientProps) {
                 </div>
 
                 <span
-                  className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${STATUS_STYLES[dose.status]}`}
+                  className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${DOSE_STATUS_STYLES[dose.status]}`}
                 >
-                  {STATUS_LABELS[dose.status]}
+                  {DOSE_STATUS_LABELS[dose.status]}
                 </span>
               </div>
 

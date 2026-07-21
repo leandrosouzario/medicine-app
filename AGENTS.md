@@ -16,6 +16,7 @@ App de controle de medicamentos em `https://med.leandrosouza.info`.
 - Persistência em Supabase (`med_medications`, `med_dose_events`) via `src/features/medications/`
 - Agenda: horários fixos, intervalo (a cada X h), quando necessário; dias da semana
 - Doses perdidas: pending com horário passado → `missed` ao sincronizar (abrir Hoje)
+- Histórico: `/historico` — resumo de aderência (7 ou 30 dias), por medicamento e por dia
 - Importação única do IndexedDB local (legado S1) em `LocalDataMigrator`
 - Fuso horário local via cookie `tz_offset_min` (`TzSetter`) — geração de doses no servidor respeita o offset do browser
 - PWA via `src/app/manifest.ts` + service worker (`public/sw.js`) com notificações locais de dose
@@ -104,5 +105,5 @@ docker compose up -d --build
 | S4 | PWA completo (ícones PNG, service worker) | Concluída |
 | S5 | Consolidação (docs, branch main) | Concluída |
 | S6 | Agenda avançada (intervalo, dias, perdido auto, DatePicker) | Concluída |
-| S7 | Histórico e aderência | Planejada |
+| S7 | Histórico e aderência (7/30 dias, % tomadas) | Concluída |
 | S8 | Notificações robustas (ação “Tomado” na notif.) | Planejada |

@@ -4,6 +4,7 @@ import {
   doseEventFromRow,
   medicationFromRow,
 } from '@/features/medications/mappers'
+import { buildHistoryData, type HistoryPeriod } from '@/features/medications/history'
 import { getTodayDoseEvents } from '@/features/medications/dose-schedule'
 import { syncDoseEventsWithSupabase } from '@/features/medications/sync-doses'
 import { markMissedPendingDoses } from '@/features/medications/mark-missed-doses'
@@ -137,4 +138,16 @@ export async function getTodayDoses(): Promise<
   ])
 
   return getTodayDoseEvents(doseEvents, medications, { tzOffsetMinutes })
+}
+
+export async function getHistory(period: HistoryPeriod = 7) {
+  await ensureDoseSchedule()
+
+  const [medications, doseEvents, tzOffsetMinutes] = await Promise.all([
+    getMedications(),
+    getDoseEvents(),
+    getTzOffsetMinutes(),
+  ])
+
+  return buildHistoryData(doseEvents, medications, period, tzOffsetMinutes)
 }
