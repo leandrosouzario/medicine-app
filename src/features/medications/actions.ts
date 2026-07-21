@@ -17,10 +17,45 @@ import {
   medicationToUpdate,
 } from '@/features/medications/mappers'
 import { syncDoseEventsWithSupabase } from '@/features/medications/sync-doses'
+import { isSnoozeMinutes, type SnoozeMinutes } from '@/features/medications/snooze'
 import { getTzOffsetMinutes } from '@/lib/tz'
 
 type ActionResult = {
   error?: string
+}
+
+async function decrementStockForTakenDose(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  medicationId: string,
+): Promise<ActionResult> {
+  const { data: medication, error: fetchError } = await supabase
+    .from('med_medications')
+    .select('stock_quantity, quantity_per_dose')
+    .eq('id', medicationId)
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (fetchError) {
+    return { error: fetchError.message }
+  }
+
+  if (!medication || medication.stock_quantity == null) {
+    return {}
+  }
+
+  const nextStock = Math.max(0, medication.stock_quantity - medication.quantity_per_dose)
+  const { error: updateError } = await supabase
+    .from('med_medications')
+    .update({ stock_quantity: nextStock })
+    .eq('id', medicationId)
+    .eq('user_id', userId)
+
+  if (updateError) {
+    return { error: updateError.message }
+  }
+
+  return {}
 }
 
 async function getAuthenticatedClient() {
@@ -160,6 +195,21 @@ export async function updateDoseEventStatus(
     return { error: 'Não autenticado' }
   }
 
+  const { data: existing, error: fetchError } = await auth.supabase
+    .from('med_dose_events')
+    .select('id, medication_id, status')
+    .eq('id', eventId)
+    .eq('user_id', auth.user.id)
+    .maybeSingle()
+
+  if (fetchError) {
+    return { error: fetchError.message }
+  }
+
+  if (!existing) {
+    return { error: 'Dose não encontrada.' }
+  }
+
   const update = {
     status,
     taken_at: status === 'taken' ? new Date().toISOString() : null,
@@ -182,7 +232,124 @@ export async function updateDoseEventStatus(
     return { error: 'Dose não encontrada.' }
   }
 
+  if (status === 'taken' && existing.status !== 'taken') {
+    const stockResult = await decrementStockForTakenDose(
+      auth.supabase,
+      auth.user.id,
+      existing.medication_id,
+    )
+    if (stockResult.error) {
+      return stockResult
+    }
+  }
+
   revalidatePath('/hoje')
+  revalidatePath('/medicamentos')
+  revalidatePath('/historico')
+  return {}
+}
+
+export async function snoozeDoseEvent(
+  eventId: string,
+  minutes: SnoozeMinutes,
+): Promise<ActionResult> {
+  const auth = await getAuthenticatedClient()
+  if (!auth) {
+    return { error: 'Não autenticado' }
+  }
+
+  if (!isSnoozeMinutes(minutes)) {
+    return { error: 'Intervalo de adiamento inválido.' }
+  }
+
+  const { data: existing, error: fetchError } = await auth.supabase
+    .from('med_dose_events')
+    .select('id, status')
+    .eq('id', eventId)
+    .eq('user_id', auth.user.id)
+    .maybeSingle()
+
+  if (fetchError) {
+    return { error: fetchError.message }
+  }
+
+  if (!existing) {
+    return { error: 'Dose não encontrada.' }
+  }
+
+  if (existing.status !== 'pending') {
+    return { error: 'Só é possível adiar doses pendentes.' }
+  }
+
+  const scheduledAt = new Date(Date.now() + minutes * 60 * 1000).toISOString()
+  const { error } = await auth.supabase
+    .from('med_dose_events')
+    .update({ scheduled_at: scheduledAt })
+    .eq('id', eventId)
+    .eq('user_id', auth.user.id)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath('/hoje')
+  return {}
+}
+
+export async function recordManualDose(
+  medicationId: string,
+  note?: string,
+): Promise<ActionResult> {
+  const auth = await getAuthenticatedClient()
+  if (!auth) {
+    return { error: 'Não autenticado' }
+  }
+
+  const { data: medication, error: fetchError } = await auth.supabase
+    .from('med_medications')
+    .select('id, active')
+    .eq('id', medicationId)
+    .eq('user_id', auth.user.id)
+    .maybeSingle()
+
+  if (fetchError) {
+    return { error: fetchError.message }
+  }
+
+  if (!medication) {
+    return { error: 'Medicamento não encontrado.' }
+  }
+
+  if (!medication.active) {
+    return { error: 'Medicamento inativo.' }
+  }
+
+  const now = new Date().toISOString()
+  const { error } = await auth.supabase.from('med_dose_events').insert({
+    user_id: auth.user.id,
+    medication_id: medicationId,
+    scheduled_at: now,
+    status: 'taken',
+    taken_at: now,
+    note: note?.trim() || null,
+  })
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  const stockResult = await decrementStockForTakenDose(
+    auth.supabase,
+    auth.user.id,
+    medicationId,
+  )
+  if (stockResult.error) {
+    return stockResult
+  }
+
+  revalidatePath('/hoje')
+  revalidatePath('/medicamentos')
+  revalidatePath('/historico')
   return {}
 }
 

@@ -26,6 +26,10 @@ export type Medication = {
   schedule: MedicationSchedule
   period: MedicationPeriod
   active: boolean
+  /** null = não controlar estoque */
+  stockQuantity?: number | null
+  quantityPerDose: number
+  refillThreshold: number
   createdAt: string
   updatedAt: string
 }

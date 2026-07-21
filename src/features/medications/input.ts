@@ -11,6 +11,10 @@ export type MedicationInput = {
   startDate: string
   endDate?: string
   active: boolean
+  trackStock: boolean
+  stockQuantity?: number
+  quantityPerDose: number
+  refillThreshold: number
 }
 
 export function defaultMedicationInput(): MedicationInput {
@@ -27,6 +31,10 @@ export function defaultMedicationInput(): MedicationInput {
     startDate: todayLocalDate(),
     endDate: '',
     active: true,
+    trackStock: false,
+    stockQuantity: 30,
+    quantityPerDose: 1,
+    refillThreshold: 7,
   }
 }
 
@@ -41,6 +49,10 @@ export function medicationToInput(medication: Medication): MedicationInput {
     startDate: medication.period.startDate,
     endDate: medication.period.endDate ?? '',
     active: medication.active,
+    trackStock: medication.stockQuantity != null,
+    stockQuantity: medication.stockQuantity ?? 30,
+    quantityPerDose: medication.quantityPerDose,
+    refillThreshold: medication.refillThreshold,
   }
 }
 
@@ -74,6 +86,19 @@ export function validateMedicationInput(input: MedicationInput): string | null {
     const startTime = schedule.times?.[0]
     if (!startTime) {
       return 'Informe o horário da primeira dose.'
+    }
+  }
+
+  if (input.trackStock) {
+    const stock = input.stockQuantity ?? 0
+    if (stock < 0) {
+      return 'A quantidade em estoque não pode ser negativa.'
+    }
+    if (input.quantityPerDose < 1) {
+      return 'Informe ao menos 1 unidade por dose.'
+    }
+    if (input.refillThreshold < 0) {
+      return 'O limite de reposição não pode ser negativo.'
     }
   }
 
@@ -125,6 +150,9 @@ export function buildMedicationFromInput(
       endDate: input.endDate || undefined,
     },
     active: input.active,
+    stockQuantity: input.trackStock ? (input.stockQuantity ?? 0) : null,
+    quantityPerDose: input.quantityPerDose,
+    refillThreshold: input.refillThreshold,
     createdAt: existing?.createdAt ?? now,
     updatedAt: now,
   }

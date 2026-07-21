@@ -143,6 +143,7 @@ export function HistoricoClient({
                       </p>
                       <p className="text-xs text-slate-500 dark:text-slate-400">
                         {formatTime(new Date(dose.scheduledAt))}
+                        {dose.note ? ` · ${dose.note}` : ''}
                       </p>
                     </div>
                     <span

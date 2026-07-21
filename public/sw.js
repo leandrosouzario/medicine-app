@@ -4,7 +4,7 @@
 //   2. Exibir notificações agendadas pelo cliente via postMessage
 //   3. Marcar dose como tomada (via client) ou abrir /hoje
 
-const CACHE_NAME = 'remedios-v2'
+const CACHE_NAME = 'remedios-v3'
 
 const PRECACHE_URLS = [
   '/hoje',
@@ -78,7 +78,7 @@ self.addEventListener('message', (event) => {
         data: { url: '/hoje', doseId: dose.id },
         actions: [
           { action: 'taken', title: 'Tomado ✓' },
-          { action: 'snooze', title: 'Lembrar em 10 min' },
+          { action: 'snooze-10', title: 'Adiar 10 min' },
         ],
         requireInteraction: false,
       })
@@ -95,21 +95,23 @@ self.addEventListener('notificationclick', (event) => {
   const doseId = event.notification.data?.doseId
   const targetUrl = event.notification.data?.url ?? '/hoje'
 
-  if (event.action === 'snooze') {
-    setTimeout(() => {
-      self.registration.showNotification(event.notification.title, {
-        body: event.notification.body,
-        icon: '/icons/icon-192.png',
-        badge: '/icons/icon-192.png',
-        tag: event.notification.tag ?? `snooze-${Date.now()}`,
-        data: { url: targetUrl, doseId },
-        actions: [
-          { action: 'taken', title: 'Tomado ✓' },
-          { action: 'snooze', title: 'Lembrar em 10 min' },
-        ],
-      })
-    }, 10 * 60 * 1000)
+  if (event.action === 'snooze-10' && doseId) {
+    event.waitUntil(
+      self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+        for (const client of clients) {
+          client.postMessage({ type: 'SNOOZE_DOSE', doseId, minutes: 10 })
+        }
 
+        if (clients.length > 0) {
+          const existing = clients.find((c) => c.url.includes(self.location.origin))
+          return existing?.focus()
+        }
+
+        return self.clients.openWindow(
+          `/hoje?snooze=${encodeURIComponent(doseId)}&min=10`,
+        )
+      }),
+    )
     return
   }
 

@@ -108,11 +108,12 @@ docker compose up -d --build
 | S6 | Agenda avançada (intervalo, dias, perdido auto, DatePicker) | Concluída |
 | S7 | Histórico e aderência (7/30 dias, % tomadas) | Concluída |
 | S8 | Notificações: ação “Tomado” grava no BD | Concluída |
+| S9 | Dose extra/manual, notas visíveis, snooze persistente (10/15/30), estoque em unidades | Concluída |
 
 ## Notificações (limitações)
 
 - Agendamento via `setTimeout` no service worker — funciona com app em segundo plano ou aberto
 - **iOS:** lembretes não são confiáveis com app fechado por longos períodos; instale na Tela de Início
 - Botão **Tomado** na notificação: `postMessage` → `NotificationActionHandler` → `updateDoseEventStatus`; se o app estiver fechado, abre `/hoje?taken=<id>`
-- **Snooze** (10 min) é local ao dispositivo, não persiste no Supabase
+- **Adiar** na notificação: persiste no Supabase (`scheduled_at` +10 min); na tela Hoje há opções de 10, 15 e 30 min
 - Push server-side (fora do escopo): exigiria backend/worker no mini-server

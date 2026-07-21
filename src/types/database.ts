@@ -16,6 +16,9 @@ export type MedMedicationRow = {
   schedule: MedicationSchedule
   period: MedicationPeriod
   active: boolean
+  stock_quantity: number | null
+  quantity_per_dose: number
+  refill_threshold: number
   created_at: string
   updated_at: string
 }
@@ -43,6 +46,9 @@ export type MedMedicationInsert = {
   schedule: MedicationSchedule
   period: MedicationPeriod
   active?: boolean
+  stock_quantity?: number | null
+  quantity_per_dose?: number
+  refill_threshold?: number
 }
 
 export type MedMedicationUpdate = {
@@ -54,6 +60,9 @@ export type MedMedicationUpdate = {
   schedule: MedicationSchedule
   period: MedicationPeriod
   active: boolean
+  stock_quantity?: number | null
+  quantity_per_dose?: number
+  refill_threshold?: number
 }
 
 export type MedDoseEventInsert = {

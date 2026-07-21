@@ -140,6 +140,28 @@ export async function getTodayDoses(): Promise<
   return getTodayDoseEvents(doseEvents, medications, { tzOffsetMinutes })
 }
 
+export async function getHojePageData(): Promise<{
+  doses: Array<DoseEvent & { medication: Medication }>
+  asNeededMedications: Medication[]
+  extraDoseMedications: Medication[]
+}> {
+  const [doses, medications] = await Promise.all([getTodayDoses(), getMedications()])
+
+  const activeMedications = medications.filter((medication) => medication.active)
+  const asNeededMedications = activeMedications.filter(
+    (medication) => medication.schedule.type === 'as_needed',
+  )
+  const extraDoseMedications = activeMedications.filter(
+    (medication) => medication.schedule.type !== 'as_needed',
+  )
+
+  return {
+    doses,
+    asNeededMedications,
+    extraDoseMedications,
+  }
+}
+
 export async function getHistory(period: HistoryPeriod = 7) {
   await ensureDoseSchedule()
 

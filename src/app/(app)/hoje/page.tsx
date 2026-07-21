@@ -3,16 +3,20 @@ import {
   NotificationScheduler,
   NotificationStatusBadge,
 } from '@/features/medications/components/NotificationScheduler'
-import { getTodayDoses } from '@/features/medications/queries'
+import { getHojePageData } from '@/features/medications/queries'
 
 export default async function HojePage() {
-  const doses = await getTodayDoses()
+  const { doses, asNeededMedications, extraDoseMedications } = await getHojePageData()
 
   return (
     <>
       <NotificationScheduler doses={doses} />
       <NotificationStatusBadge />
-      <HojeClient doses={doses} />
+      <HojeClient
+        doses={doses}
+        asNeededMedications={asNeededMedications}
+        extraDoseMedications={extraDoseMedications}
+      />
     </>
   )
 }

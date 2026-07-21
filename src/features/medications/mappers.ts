@@ -18,6 +18,9 @@ export function medicationFromRow(row: MedMedicationRow): Medication {
     schedule: row.schedule,
     period: row.period,
     active: row.active,
+    stockQuantity: row.stock_quantity ?? null,
+    quantityPerDose: row.quantity_per_dose ?? 1,
+    refillThreshold: row.refill_threshold ?? 7,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
@@ -49,6 +52,9 @@ export function medicationToInsert(
     schedule: medication.schedule,
     period: medication.period,
     active: medication.active,
+    stock_quantity: medication.stockQuantity ?? null,
+    quantity_per_dose: medication.quantityPerDose ?? 1,
+    refill_threshold: medication.refillThreshold ?? 7,
   }
 }
 
@@ -62,6 +68,9 @@ export function medicationToUpdate(medication: Medication): MedMedicationUpdate 
     schedule: medication.schedule,
     period: medication.period,
     active: medication.active,
+    stock_quantity: medication.stockQuantity ?? null,
+    quantity_per_dose: medication.quantityPerDose ?? 1,
+    refill_threshold: medication.refillThreshold ?? 7,
   }
 }
 

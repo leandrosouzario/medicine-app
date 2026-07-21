@@ -10,6 +10,7 @@ import {
   describePeriod,
   describeSchedule,
 } from '@/features/medications/dose-schedule'
+import { formatStock, isLowStock } from '@/features/medications/stock'
 import type { Medication } from '@/lib/db/types'
 
 type MedicamentosClientProps = {
@@ -89,6 +90,11 @@ export function MedicamentosClient({ medications }: MedicamentosClientProps) {
                         Inativo
                       </span>
                     ) : null}
+                    {isLowStock(medication) ? (
+                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+                        Estoque baixo
+                      </span>
+                    ) : null}
                   </div>
                   {medication.dosage ? (
                     <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
@@ -97,6 +103,7 @@ export function MedicamentosClient({ medications }: MedicamentosClientProps) {
                   ) : null}
                   <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
                     {describeSchedule(medication)} · {describePeriod(medication)}
+                    {formatStock(medication) ? ` · ${formatStock(medication)}` : ''}
                   </p>
                   {medication.instructions ? (
                     <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
