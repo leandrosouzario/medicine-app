@@ -64,6 +64,40 @@ async function decrementStockForTakenDose(
   return {}
 }
 
+async function restoreStockForDeletedTakenDose(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  medicationId: string,
+): Promise<ActionResult> {
+  const { data: medication, error: fetchError } = await supabase
+    .from('med_medications')
+    .select('stock_quantity, quantity_per_dose')
+    .eq('id', medicationId)
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (fetchError) {
+    return { error: fetchError.message }
+  }
+
+  if (!medication || medication.stock_quantity == null) {
+    return {}
+  }
+
+  const nextStock = medication.stock_quantity + medication.quantity_per_dose
+  const { error: updateError } = await supabase
+    .from('med_medications')
+    .update({ stock_quantity: nextStock })
+    .eq('id', medicationId)
+    .eq('user_id', userId)
+
+  if (updateError) {
+    return { error: updateError.message }
+  }
+
+  return {}
+}
+
 async function getAuthenticatedClient() {
   const supabase = await createClient()
   const {
@@ -251,6 +285,55 @@ export async function updateDoseEventStatus(
 
   if (status === 'taken' && existing.status !== 'taken') {
     const stockResult = await decrementStockForTakenDose(
+      auth.supabase,
+      auth.user.id,
+      existing.medication_id,
+    )
+    if (stockResult.error) {
+      return stockResult
+    }
+  }
+
+  revalidatePath('/hoje')
+  revalidatePath('/medicamentos')
+  revalidatePath('/historico')
+  revalidatePath('/registrar-passado')
+  return {}
+}
+
+export async function deleteDoseEvent(eventId: string): Promise<ActionResult> {
+  const auth = await getAuthenticatedClient()
+  if (!auth) {
+    return { error: 'Não autenticado' }
+  }
+
+  const { data: existing, error: fetchError } = await auth.supabase
+    .from('med_dose_events')
+    .select('id, medication_id, status')
+    .eq('id', eventId)
+    .eq('user_id', auth.user.id)
+    .maybeSingle()
+
+  if (fetchError) {
+    return { error: fetchError.message }
+  }
+
+  if (!existing) {
+    return { error: 'Dose não encontrada.' }
+  }
+
+  const { error } = await auth.supabase
+    .from('med_dose_events')
+    .delete()
+    .eq('id', eventId)
+    .eq('user_id', auth.user.id)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  if (existing.status === 'taken') {
+    const stockResult = await restoreStockForDeletedTakenDose(
       auth.supabase,
       auth.user.id,
       existing.medication_id,

@@ -3,9 +3,9 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { BarChart3, Check, History } from 'lucide-react'
+import { BarChart3, Check, History, Trash2 } from 'lucide-react'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { updateDoseEventStatus } from '@/features/medications/actions'
+import { deleteDoseEvent, updateDoseEventStatus } from '@/features/medications/actions'
 import {
   DOSE_STATUS_LABELS,
   DOSE_STATUS_STYLES,
@@ -204,6 +204,29 @@ function HistoryDoseRow({ dose }: { dose: HistoryDose }) {
     })
   }
 
+  function handleDelete() {
+    const timeLabel = formatTime(new Date(dose.scheduledAt))
+    const message =
+      dose.status === 'taken'
+        ? `Excluir a dose tomada de ${dose.medication.name} às ${timeLabel}? O estoque será reposto se estiver controlado.`
+        : `Excluir ${dose.medication.name} às ${timeLabel} do histórico? Essa dose deixará de contar na aderência.`
+
+    if (!window.confirm(message)) {
+      return
+    }
+
+    startTransition(async () => {
+      const result = await deleteDoseEvent(dose.id)
+
+      if (result.error) {
+        window.alert(result.error)
+        return
+      }
+
+      router.refresh()
+    })
+  }
+
   return (
     <li className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-800 dark:bg-slate-900">
       <div className="flex items-start justify-between gap-3">
@@ -221,11 +244,22 @@ function HistoryDoseRow({ dose }: { dose: HistoryDose }) {
             </span>
           ) : null}
         </div>
-        <span
-          className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${DOSE_STATUS_STYLES[dose.status]}`}
-        >
-          {DOSE_STATUS_LABELS[dose.status]}
-        </span>
+        <div className="flex shrink-0 items-start gap-2">
+          <span
+            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${DOSE_STATUS_STYLES[dose.status]}`}
+          >
+            {DOSE_STATUS_LABELS[dose.status]}
+          </span>
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={isPending}
+            className="rounded-lg p-1 text-slate-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-60 dark:hover:bg-red-950/30 dark:hover:text-red-400"
+            title="Excluir do histórico"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       {canRegister ? (
