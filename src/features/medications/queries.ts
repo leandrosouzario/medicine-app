@@ -5,6 +5,7 @@ import {
   medicationFromRow,
 } from '@/features/medications/mappers'
 import { buildHistoryData, type HistoryPeriod } from '@/features/medications/history'
+import { backfillPastDoseEvents } from '@/features/medications/backfill-past-doses'
 import { getTodayDoseEvents } from '@/features/medications/dose-schedule'
 import { syncDoseEventsWithSupabase } from '@/features/medications/sync-doses'
 import { markMissedPendingDoses } from '@/features/medications/mark-missed-doses'
@@ -163,13 +164,39 @@ export async function getHojePageData(): Promise<{
 }
 
 export async function getHistory(period: HistoryPeriod = 7) {
+  const auth = await getAuthenticatedClient()
+  if (!auth) {
+    return buildHistoryData([], [], period, 0)
+  }
+
   await ensureDoseSchedule()
 
-  const [medications, doseEvents, tzOffsetMinutes] = await Promise.all([
-    getMedications(),
-    getDoseEvents(),
+  const [medicationRows, doseEventRows, tzOffsetMinutes] = await Promise.all([
+    fetchMedicationRows(auth.user.id),
+    fetchDoseEventRows(auth.user.id),
     getTzOffsetMinutes(),
   ])
 
+  const medications = medicationRows.map(medicationFromRow)
+
+  await backfillPastDoseEvents(
+    auth.supabase,
+    auth.user.id,
+    medications,
+    doseEventRows,
+    period,
+    tzOffsetMinutes,
+  )
+
+  await markMissedPendingDoses(auth.supabase, auth.user.id)
+
+  const refreshedRows = await fetchDoseEventRows(auth.user.id)
+  const doseEvents = refreshedRows.map(doseEventFromRow)
+
   return buildHistoryData(doseEvents, medications, period, tzOffsetMinutes)
+}
+
+export async function getRetroactiveDoseFormData(): Promise<Medication[]> {
+  const medications = await getMedications()
+  return medications.filter((medication) => medication.active)
 }

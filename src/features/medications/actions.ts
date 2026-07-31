@@ -18,6 +18,12 @@ import {
 } from '@/features/medications/mappers'
 import { syncDoseEventsWithSupabase } from '@/features/medications/sync-doses'
 import { isSnoozeMinutes, type SnoozeMinutes } from '@/features/medications/snooze'
+import {
+  validateRetroactiveDate,
+  validateTakenAtNotFuture,
+} from '@/features/medications/retroactive'
+import { doseEventKey } from '@/features/medications/event-key'
+import { parseTimeOnDateWithOffset, parseLocalDate } from '@/lib/dates'
 import { getTzOffsetMinutes } from '@/lib/tz'
 
 type ActionResult = {
@@ -189,6 +195,7 @@ export async function updateDoseEventStatus(
   eventId: string,
   status: DoseEvent['status'],
   note?: string,
+  takenAt?: string,
 ): Promise<ActionResult> {
   const auth = await getAuthenticatedClient()
   if (!auth) {
@@ -197,7 +204,7 @@ export async function updateDoseEventStatus(
 
   const { data: existing, error: fetchError } = await auth.supabase
     .from('med_dose_events')
-    .select('id, medication_id, status')
+    .select('id, medication_id, status, scheduled_at')
     .eq('id', eventId)
     .eq('user_id', auth.user.id)
     .maybeSingle()
@@ -210,9 +217,19 @@ export async function updateDoseEventStatus(
     return { error: 'Dose não encontrada.' }
   }
 
+  const now = new Date()
+  let resolvedTakenAt: string | null = null
+
+  if (status === 'taken') {
+    resolvedTakenAt = takenAt ?? now.toISOString()
+    if (new Date(resolvedTakenAt) > now) {
+      return { error: 'O horário de tomada não pode ser no futuro.' }
+    }
+  }
+
   const update = {
     status,
-    taken_at: status === 'taken' ? new Date().toISOString() : null,
+    taken_at: resolvedTakenAt,
     note: note?.trim() || null,
   }
 
@@ -246,6 +263,7 @@ export async function updateDoseEventStatus(
   revalidatePath('/hoje')
   revalidatePath('/medicamentos')
   revalidatePath('/historico')
+  revalidatePath('/registrar-passado')
   return {}
 }
 
@@ -351,6 +369,127 @@ export async function recordManualDose(
   revalidatePath('/medicamentos')
   revalidatePath('/historico')
   return {}
+}
+
+export async function recordRetroactiveDose(input: {
+  medicationId: string
+  date: string
+  time: string
+  note?: string
+  takenTime?: string
+}): Promise<ActionResult> {
+  const auth = await getAuthenticatedClient()
+  if (!auth) {
+    return { error: 'Não autenticado' }
+  }
+
+  const tzOffsetMinutes = await getTzOffsetMinutes()
+  const dateError = validateRetroactiveDate(input.date, tzOffsetMinutes)
+  if (dateError) {
+    return { error: dateError }
+  }
+
+  if (!input.time) {
+    return { error: 'Informe o horário.' }
+  }
+
+  const { data: medication, error: fetchError } = await auth.supabase
+    .from('med_medications')
+    .select('id, active')
+    .eq('id', input.medicationId)
+    .eq('user_id', auth.user.id)
+    .maybeSingle()
+
+  if (fetchError) {
+    return { error: fetchError.message }
+  }
+
+  if (!medication) {
+    return { error: 'Medicamento não encontrado.' }
+  }
+
+  if (!medication.active) {
+    return { error: 'Medicamento inativo.' }
+  }
+
+  const scheduledAt = parseTimeOnDateWithOffset(
+    parseLocalDate(input.date),
+    input.time,
+    tzOffsetMinutes,
+  ).toISOString()
+
+  const takenAt = input.takenTime
+    ? parseTimeOnDateWithOffset(parseLocalDate(input.date), input.takenTime, tzOffsetMinutes).toISOString()
+    : scheduledAt
+  const takenAtError = validateTakenAtNotFuture(takenAt)
+  if (takenAtError) {
+    return { error: takenAtError }
+  }
+
+  const slotKey = doseEventKey(input.medicationId, scheduledAt)
+  const { data: existingRows, error: existingError } = await auth.supabase
+    .from('med_dose_events')
+    .select('id, status, scheduled_at, medication_id')
+    .eq('user_id', auth.user.id)
+    .eq('medication_id', input.medicationId)
+
+  if (existingError) {
+    return { error: existingError.message }
+  }
+
+  const existing = (existingRows ?? []).find(
+    (row) => doseEventKey(row.medication_id, row.scheduled_at) === slotKey,
+  )
+
+  if (existing?.status === 'taken') {
+    return { error: 'Esta dose já foi registrada como tomada.' }
+  }
+
+  const note = input.note?.trim() || null
+
+  if (existing) {
+    const { error } = await auth.supabase
+      .from('med_dose_events')
+      .update({
+        status: 'taken',
+        taken_at: takenAt,
+        note,
+      })
+      .eq('id', existing.id)
+      .eq('user_id', auth.user.id)
+
+    if (error) {
+      return { error: error.message }
+    }
+  } else {
+    const { error } = await auth.supabase.from('med_dose_events').insert({
+      user_id: auth.user.id,
+      medication_id: input.medicationId,
+      scheduled_at: scheduledAt,
+      status: 'taken',
+      taken_at: takenAt,
+      note,
+    })
+
+    if (error) {
+      return { error: error.message }
+    }
+  }
+
+  const stockResult = await decrementStockForTakenDose(
+    auth.supabase,
+    auth.user.id,
+    input.medicationId,
+  )
+  if (stockResult.error) {
+    return stockResult
+  }
+
+  revalidatePath('/hoje')
+  revalidatePath('/medicamentos')
+  revalidatePath('/historico')
+  revalidatePath('/registrar-passado')
+  redirect('/historico')
 }
 
 export async function importFromIndexedDb(

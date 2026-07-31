@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { AlarmClock, CalendarDays, Check, Plus, SkipForward } from 'lucide-react'
+import { AlarmClock, CalendarDays, Check, History, Plus, SkipForward } from 'lucide-react'
 import { EmptyState } from '@/components/ui/EmptyState'
 import {
   recordManualDose,
@@ -163,6 +163,16 @@ export function HojeClient({
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-end">
+        <Link
+          href="/registrar-passado"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-700 transition hover:text-brand-800 dark:text-brand-300 dark:hover:text-brand-200"
+        >
+          <History className="h-4 w-4" />
+          Registrar dose de outro dia
+        </Link>
+      </div>
+
       {items.length > 0 ? (
         <section className="space-y-4">
           <p className="text-sm text-slate-500 dark:text-slate-400">

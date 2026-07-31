@@ -30,6 +30,7 @@ export const pageTitles: Record<string, string> = {
   '/medicamentos': 'Medicamentos',
   '/medicamentos/novo': 'Novo medicamento',
   '/historico': 'Histórico',
+  '/registrar-passado': 'Dose passada',
 }
 
 export function resolvePageTitle(pathname: string): string {

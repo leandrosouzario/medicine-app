@@ -111,6 +111,24 @@ function eventKey(event: Pick<DoseEvent, 'medicationId' | 'scheduledAt'>): strin
   return doseEventKey(event.medicationId, event.scheduledAt)
 }
 
+/** Gera slots agendados para um medicamento dentro de um intervalo (exclui as_needed). */
+export function generateMedicationDoseEvents(
+  medication: Medication,
+  from: Date,
+  to: Date,
+  tzOffsetMinutes: number,
+): DoseEvent[] {
+  if (!medication.active || medication.schedule.type === 'as_needed') {
+    return []
+  }
+
+  if (medication.schedule.type === 'interval') {
+    return generateIntervalEvents(medication, from, to, tzOffsetMinutes)
+  }
+
+  return generateFixedTimeEvents(medication, from, to, tzOffsetMinutes)
+}
+
 export function regenerateDoseEvents(
   medication: Medication,
   existingEvents: DoseEvent[],

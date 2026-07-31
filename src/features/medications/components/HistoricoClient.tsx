@@ -1,16 +1,23 @@
 'use client'
 
+import { useState, useTransition } from 'react'
 import Link from 'next/link'
-import { BarChart3 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { BarChart3, Check, History } from 'lucide-react'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { updateDoseEventStatus } from '@/features/medications/actions'
 import {
   DOSE_STATUS_LABELS,
   DOSE_STATUS_STYLES,
 } from '@/features/medications/dose-status'
 import type { HistoryData, HistoryPeriod } from '@/features/medications/history'
+import { isLateRegistration } from '@/features/medications/retroactive'
+import type { DoseEvent, Medication } from '@/lib/db/types'
 import { formatTime } from '@/lib/dates'
 
 type HistoricoClientProps = HistoryData
+
+type HistoryDose = DoseEvent & { medication: Medication }
 
 function AdherenceBar({ percent }: { percent: number }) {
   return (
@@ -53,112 +60,195 @@ export function HistoricoClient({
 }: HistoricoClientProps) {
   const periods: HistoryPeriod[] = [7, 30]
 
-  if (overall.total === 0) {
-    return (
-      <div className="space-y-4">
-        <PeriodToggle period={period} periods={periods} />
-        <EmptyState
-          icon={BarChart3}
-          title="Sem histórico no período"
-          description="Quando houver doses registradas ou agendadas, elas aparecerão aqui com o resumo de aderência."
-        />
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-5">
       <div className="space-y-3">
-        <PeriodToggle period={period} periods={periods} />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <PeriodToggle period={period} periods={periods} />
+          <Link
+            href="/registrar-passado"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            <History className="h-4 w-4" />
+            Dose passada
+          </Link>
+        </div>
         <p className="text-sm text-slate-500 dark:text-slate-400">{rangeLabel}</p>
       </div>
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Resumo geral</h2>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <SummaryCard label="Tomadas" value={`${overall.takenPercent}%`} accent="text-emerald-700 dark:text-emerald-300" />
-          <SummaryCard label="Total" value={overall.total} />
-          <SummaryCard label="Puladas" value={overall.skipped} />
-          <SummaryCard label="Perdidas" value={overall.missed} accent="text-red-700 dark:text-red-300" />
-        </div>
-        <AdherenceBar percent={overall.takenPercent} />
-        <p className="text-xs text-slate-500 dark:text-slate-400">
-          {overall.taken} tomadas de {overall.taken + overall.skipped + overall.missed} doses
-          registradas (pendentes futuras não entram no percentual).
-        </p>
-      </section>
+      {overall.total === 0 ? (
+        <EmptyState
+          icon={BarChart3}
+          title="Sem histórico no período"
+          description="Quando houver doses registradas ou agendadas, elas aparecerão aqui. Você também pode registrar uma dose de outro dia."
+          action={
+            <Link
+              href="/registrar-passado"
+              className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-brand-700 dark:bg-brand-500 dark:hover:bg-brand-400"
+            >
+              <History className="h-4 w-4" />
+              Registrar dose passada
+            </Link>
+          }
+        />
+      ) : (
+        <>
+          <section className="space-y-3">
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Resumo geral</h2>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <SummaryCard
+                label="Tomadas"
+                value={`${overall.takenPercent}%`}
+                accent="text-emerald-700 dark:text-emerald-300"
+              />
+              <SummaryCard label="Total" value={overall.total} />
+              <SummaryCard label="Puladas" value={overall.skipped} />
+              <SummaryCard
+                label="Perdidas"
+                value={overall.missed}
+                accent="text-red-700 dark:text-red-300"
+              />
+            </div>
+            <AdherenceBar percent={overall.takenPercent} />
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {overall.taken} tomadas de {overall.taken + overall.skipped + overall.missed} doses
+              registradas (pendentes futuras não entram no percentual).
+            </p>
+          </section>
 
-      {byMedication.length > 0 ? (
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Por medicamento</h2>
-          <ul className="space-y-3">
-            {byMedication.map(({ medication, summary }) => (
-              <li
-                key={medication.id}
-                className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 className="font-medium text-slate-900 dark:text-white">{medication.name}</h3>
-                    {medication.dosage ? (
-                      <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                        {medication.dosage}
-                      </p>
-                    ) : null}
-                  </div>
-                  <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
-                    {summary.takenPercent}%
-                  </span>
-                </div>
-                <div className="mt-3">
-                  <AdherenceBar percent={summary.takenPercent} />
-                </div>
-                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                  {summary.taken} tomadas · {summary.skipped} puladas · {summary.missed} perdidas
-                  {summary.pending > 0 ? ` · ${summary.pending} pendentes` : ''}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Por dia</h2>
-        <ul className="space-y-4">
-          {days.map((day) => (
-            <li key={day.dateKey}>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                {day.label}
-              </h3>
-              <ul className="space-y-2">
-                {day.doses.map((dose) => (
+          {byMedication.length > 0 ? (
+            <section className="space-y-3">
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+                Por medicamento
+              </h2>
+              <ul className="space-y-3">
+                {byMedication.map(({ medication, summary }) => (
                   <li
-                    key={dose.id}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-800 dark:bg-slate-900"
+                    key={medication.id}
+                    className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"
                   >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-slate-900 dark:text-white">
-                        {dose.medication.name}
-                      </p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        {formatTime(new Date(dose.scheduledAt))}
-                        {dose.note ? ` · ${dose.note}` : ''}
-                      </p>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h3 className="font-medium text-slate-900 dark:text-white">
+                          {medication.name}
+                        </h3>
+                        {medication.dosage ? (
+                          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                            {medication.dosage}
+                          </p>
+                        ) : null}
+                      </div>
+                      <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                        {summary.takenPercent}%
+                      </span>
                     </div>
-                    <span
-                      className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${DOSE_STATUS_STYLES[dose.status]}`}
-                    >
-                      {DOSE_STATUS_LABELS[dose.status]}
-                    </span>
+                    <div className="mt-3">
+                      <AdherenceBar percent={summary.takenPercent} />
+                    </div>
+                    <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                      {summary.taken} tomadas · {summary.skipped} puladas · {summary.missed}{' '}
+                      perdidas
+                      {summary.pending > 0 ? ` · ${summary.pending} pendentes` : ''}
+                    </p>
                   </li>
                 ))}
               </ul>
-            </li>
-          ))}
-        </ul>
-      </section>
+            </section>
+          ) : null}
+
+          <section className="space-y-3">
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Por dia</h2>
+            <ul className="space-y-4">
+              {days.map((day) => (
+                <li key={day.dateKey}>
+                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    {day.label}
+                  </h3>
+                  <ul className="space-y-2">
+                    {day.doses.map((dose) => (
+                      <HistoryDoseRow key={dose.id} dose={dose} />
+                    ))}
+                  </ul>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </>
+      )}
     </div>
+  )
+}
+
+function HistoryDoseRow({ dose }: { dose: HistoryDose }) {
+  const router = useRouter()
+  const [note, setNote] = useState(dose.note ?? '')
+  const [isPending, startTransition] = useTransition()
+  const canRegister = dose.status === 'missed' || dose.status === 'skipped'
+  const late = dose.status === 'taken' && isLateRegistration(dose.scheduledAt, dose.takenAt)
+
+  function handleRegister() {
+    startTransition(async () => {
+      const result = await updateDoseEventStatus(
+        dose.id,
+        'taken',
+        note,
+        dose.scheduledAt,
+      )
+
+      if (result.error) {
+        window.alert(result.error)
+        return
+      }
+
+      router.refresh()
+    })
+  }
+
+  return (
+    <li className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-800 dark:bg-slate-900">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium text-slate-900 dark:text-white">
+            {dose.medication.name}
+          </p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {formatTime(new Date(dose.scheduledAt))}
+            {dose.note ? ` · ${dose.note}` : ''}
+          </p>
+          {late ? (
+            <span className="mt-1 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+              Registrado depois
+            </span>
+          ) : null}
+        </div>
+        <span
+          className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${DOSE_STATUS_STYLES[dose.status]}`}
+        >
+          {DOSE_STATUS_LABELS[dose.status]}
+        </span>
+      </div>
+
+      {canRegister ? (
+        <div className="mt-3 space-y-2 border-t border-slate-100 pt-3 dark:border-slate-800">
+          <input
+            type="text"
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            placeholder="Nota opcional"
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+          />
+          <button
+            type="button"
+            onClick={handleRegister}
+            disabled={isPending}
+            className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:opacity-60 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+          >
+            <Check className="h-4 w-4" />
+            {isPending ? 'Salvando…' : 'Registrar tomada'}
+          </button>
+        </div>
+      ) : null}
+    </li>
   )
 }
 

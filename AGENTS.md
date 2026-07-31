@@ -109,6 +109,7 @@ docker compose up -d --build
 | S7 | Histórico e aderência (7/30 dias, % tomadas) | Concluída |
 | S8 | Notificações: ação “Tomado” grava no BD | Concluída |
 | S9 | Dose extra/manual, notas visíveis, snooze persistente (10/15/30), estoque em unidades | Concluída |
+| S10 | Registro retroativo: backfill, correção no histórico, formulário dose passada | Concluída |
 
 ## Notificações (limitações)
 
@@ -116,4 +117,5 @@ docker compose up -d --build
 - **iOS:** lembretes não são confiáveis com app fechado por longos períodos; instale na Tela de Início
 - Botão **Tomado** na notificação: `postMessage` → `NotificationActionHandler` → `updateDoseEventStatus`; se o app estiver fechado, abre `/hoje?taken=<id>`
 - **Adiar** na notificação: persiste no Supabase (`scheduled_at` +10 min); na tela Hoje há opções de 10, 15 e 30 min
+- **Registro retroativo:** backfill de slots passados ao abrir Histórico; doses perdidas podem ser corrigidas inline; formulário em `/registrar-passado` (até 30 dias)
 - Push server-side (fora do escopo): exigiria backend/worker no mini-server
