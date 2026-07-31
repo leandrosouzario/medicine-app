@@ -10,7 +10,7 @@ import {
   DOSE_STATUS_LABELS,
   DOSE_STATUS_STYLES,
 } from '@/features/medications/dose-status'
-import type { HistoryData, HistoryPeriod } from '@/features/medications/history'
+import { HISTORY_PERIODS, type HistoryData, type HistoryPeriod } from '@/features/medications/history'
 import { isLateRegistration } from '@/features/medications/retroactive'
 import type { DoseEvent, Medication } from '@/lib/db/types'
 import { formatTime } from '@/lib/dates'
@@ -58,7 +58,7 @@ export function HistoricoClient({
   byMedication,
   days,
 }: HistoricoClientProps) {
-  const periods: HistoryPeriod[] = [7, 30]
+  const periods = HISTORY_PERIODS
 
   return (
     <div className="space-y-5">
@@ -294,7 +294,7 @@ function PeriodToggle({
   periods: HistoryPeriod[]
 }) {
   return (
-    <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1 dark:border-slate-700 dark:bg-slate-900">
+    <div className="flex flex-wrap gap-1 rounded-lg border border-slate-200 bg-white p-1 dark:border-slate-700 dark:bg-slate-900">
       {periods.map((value) => {
         const active = period === value
         return (

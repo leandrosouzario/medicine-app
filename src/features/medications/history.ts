@@ -13,7 +13,20 @@ import {
   startOfDayWithOffset,
 } from '@/lib/dates'
 
-export type HistoryPeriod = 7 | 30
+export type HistoryPeriod = 7 | 30 | 60 | 90
+
+export const HISTORY_PERIODS: HistoryPeriod[] = [7, 30, 60, 90]
+
+export function parseHistoryPeriod(value: string | undefined): HistoryPeriod {
+  if (value === '30') return 30
+  if (value === '60') return 60
+  if (value === '90') return 90
+  return 7
+}
+
+export function historyRangeLabel(period: HistoryPeriod): string {
+  return `Últimos ${period} dias`
+}
 
 export type MedicationAdherence = {
   medication: Medication
@@ -135,8 +148,7 @@ export function buildHistoryData(
     }))
     .sort((a, b) => b.dateKey.localeCompare(a.dateKey))
 
-  const rangeLabel =
-    period === 7 ? 'Últimos 7 dias' : 'Últimos 30 dias'
+  const rangeLabel = historyRangeLabel(period)
 
   return { period, rangeLabel, overall, byMedication, days }
 }
