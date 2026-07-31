@@ -60,9 +60,15 @@ export function HojeClient({
     }
   }, [extraDoseMedications, extraMedicationId])
 
-  function handleStatusChange(eventId: string, status: DoseEvent['status']) {
+  function handleStatusChange(
+    eventId: string,
+    status: DoseEvent['status'],
+    takenAt?: string,
+  ) {
     const previousItems = items
     const note = notes[eventId]?.trim()
+    const resolvedTakenAt =
+      takenAt ?? (status === 'taken' ? new Date().toISOString() : undefined)
 
     setPendingId(eventId)
     setItems((current) =>
@@ -72,14 +78,14 @@ export function HojeClient({
               ...dose,
               status,
               note: note || dose.note,
-              takenAt: status === 'taken' ? new Date().toISOString() : undefined,
+              takenAt: status === 'taken' ? resolvedTakenAt : undefined,
             }
           : dose,
       ),
     )
 
     startTransition(async () => {
-      const result = await updateDoseEventStatus(eventId, status, note)
+      const result = await updateDoseEventStatus(eventId, status, note, takenAt)
       setPendingId(null)
 
       if (result.error) {
@@ -159,7 +165,9 @@ export function HojeClient({
     )
   }
 
-  const pendingCount = items.filter((dose) => dose.status === 'pending').length
+  const actionableCount = items.filter(
+    (dose) => dose.status === 'pending' || dose.status === 'missed',
+  ).length
 
   return (
     <div className="space-y-6">
@@ -176,9 +184,9 @@ export function HojeClient({
       {items.length > 0 ? (
         <section className="space-y-4">
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            {pendingCount === 0
+            {actionableCount === 0
               ? 'Todas as doses de hoje foram registradas.'
-              : `${pendingCount} dose${pendingCount === 1 ? '' : 's'} pendente${pendingCount === 1 ? '' : 's'} hoje.`}
+              : `${actionableCount} dose${actionableCount === 1 ? '' : 's'} aguardando registro hoje.`}
           </p>
 
           <ul className="space-y-3">
@@ -285,11 +293,16 @@ function DoseCard({
   note: string
   isUpdating: boolean
   onNoteChange: (value: string) => void
-  onStatusChange: (eventId: string, status: DoseEvent['status']) => void
+  onStatusChange: (
+    eventId: string,
+    status: DoseEvent['status'],
+    takenAt?: string,
+  ) => void
   onSnooze: (eventId: string, minutes: SnoozeMinutes) => void
 }) {
   const stockLabel = formatStock(dose.medication)
   const lowStock = isLowStock(dose.medication)
+  const isActionable = dose.status === 'pending' || dose.status === 'missed'
 
   return (
     <li className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
@@ -343,12 +356,23 @@ function DoseCard({
         />
       </label>
 
-      {dose.status === 'pending' ? (
+      {isActionable ? (
         <div className="mt-4 space-y-2">
+          {dose.status === 'missed' ? (
+            <p className="text-xs text-amber-700 dark:text-amber-300">
+              Horário passou, mas ainda dá para registrar hoje.
+            </p>
+          ) : null}
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => onStatusChange(dose.id, 'taken')}
+              onClick={() =>
+                onStatusChange(
+                  dose.id,
+                  'taken',
+                  dose.status === 'missed' ? dose.scheduledAt : undefined,
+                )
+              }
               disabled={isUpdating}
               className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:opacity-60 dark:bg-emerald-500 dark:hover:bg-emerald-400"
             >
@@ -366,20 +390,22 @@ function DoseCard({
             </button>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {SNOOZE_MINUTES.map((minutes) => (
-              <button
-                key={minutes}
-                type="button"
-                onClick={() => onSnooze(dose.id, minutes)}
-                disabled={isUpdating}
-                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
-              >
-                <AlarmClock className="h-3.5 w-3.5" />
-                {minutes} min
-              </button>
-            ))}
-          </div>
+          {dose.status === 'pending' ? (
+            <div className="flex flex-wrap gap-2">
+              {SNOOZE_MINUTES.map((minutes) => (
+                <button
+                  key={minutes}
+                  type="button"
+                  onClick={() => onSnooze(dose.id, minutes)}
+                  disabled={isUpdating}
+                  className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
+                  <AlarmClock className="h-3.5 w-3.5" />
+                  {minutes} min
+                </button>
+              ))}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </li>

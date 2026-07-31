@@ -114,7 +114,7 @@ export async function ensureDoseSchedule(): Promise<void> {
     { tzOffsetMinutes },
   )
 
-  await markMissedPendingDoses(auth.supabase, auth.user.id)
+  await markMissedPendingDoses(auth.supabase, auth.user.id, tzOffsetMinutes)
 }
 
 export async function getDoseEvents(): Promise<DoseEvent[]> {
@@ -188,7 +188,7 @@ export async function getHistory(period: HistoryPeriod = 7) {
     tzOffsetMinutes,
   )
 
-  await markMissedPendingDoses(auth.supabase, auth.user.id)
+  await markMissedPendingDoses(auth.supabase, auth.user.id, tzOffsetMinutes)
 
   const refreshedRows = await fetchDoseEventRows(auth.user.id)
   const doseEvents = refreshedRows.map(doseEventFromRow)

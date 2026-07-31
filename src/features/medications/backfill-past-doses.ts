@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { DoseEvent, Medication } from '@/lib/db/types'
 import { doseEventKey } from '@/features/medications/event-key'
 import { generateMedicationDoseEvents } from '@/features/medications/dose-schedule'
+import { shouldMarkAsMissed } from '@/features/medications/mark-missed-doses'
 import { doseEventToInsert } from '@/features/medications/mappers'
 import type { HistoryPeriod } from '@/features/medications/history'
 import type { MedDoseEventRow } from '@/types/database'
@@ -42,7 +43,9 @@ export function computeMissingPastEvents(
       existingKeys.add(key)
       missing.push({
         ...event,
-        status: 'missed',
+        status: shouldMarkAsMissed(event.scheduledAt, tzOffsetMinutes, now)
+          ? 'missed'
+          : 'pending',
       })
     }
   }

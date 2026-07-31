@@ -15,7 +15,7 @@ App de controle de medicamentos em `https://med.leandrosouza.info`.
 - Componentes em `src/components/`
 - Persistência em Supabase (`med_medications`, `med_dose_events`) via `src/features/medications/`
 - Agenda: horários fixos, intervalo (a cada X h), quando necessário; dias da semana
-- Doses perdidas: pending com horário passado → `missed` ao sincronizar (abrir Hoje)
+- Doses perdidas: pending só vira `missed` após o fim do dia local (permite registrar atrasado na tela Hoje)
 - Histórico: `/historico` — resumo de aderência (7 ou 30 dias), por medicamento e por dia
 - Importação única do IndexedDB local (legado S1) em `LocalDataMigrator`
 - Fuso horário local via cookie `tz_offset_min` (`TzSetter`) — geração de doses no servidor respeita o offset do browser
